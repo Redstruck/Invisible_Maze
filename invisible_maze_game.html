@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invisible Maze</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            padding: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #gameCanvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .win-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .win-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            transform: scale(0.9);
+            animation: popIn 0.3s ease-out forwards;
+        }
+
+        @keyframes popIn {
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .win-content h2 {
+            margin: 0 0 20px 0;
+            color: #4CAF50;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .win-stats {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #4CAF50;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.3);
+        }
+
+        .new-maze-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .new-maze-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🧩 Invisible Maze</h1>
+            <p>Navigate through the hidden maze! Walls appear when you hit them.</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="timeValue">00:00</div>
+                <div class="stat-label">Time</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="collisionValue">0</div>
+                <div class="stat-label">Wall Hits</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="scoreValue">100</div>
+                <div class="stat-label">Score</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+        <div class="controls">
+            <p>Use <strong>ARROW KEYS</strong> or <strong>WASD</strong> to move</p>
+            <button class="new-maze-btn" onclick="generateNewMaze()">New Maze</button>
+        </div>
+    </div>
+
+    <div class="win-overlay" id="winOverlay">
+        <div class="win-content">
+            <h2>🎉 You Escaped! 🎉</h2>
+            <div class="win-stats">
+                <p><strong>Time:</strong> <span id="finalTime">00:00</span></p>
+                <p><strong>Wall Hits:</strong> <span id="finalCollisions">0</span></p>
+                <p><strong>Final Score:</strong> <span id="finalScore">100</span></p>
+            </div>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game constants
+        const CELL_SIZE = 20;
+        const MAZE_WIDTH = Math.floor(canvas.width / CELL_SIZE);
+        const MAZE_HEIGHT = Math.floor(canvas.height / CELL_SIZE);
+        
+        // Game state
+        let player = { x: 1, y: 1 };
+        let maze = [];
+        let revealedWalls = new Set();
+        let startTime = Date.now();
+        let collisions = 0;
+        let gameWon = false;
+        let gameStarted = false;
+        
+        // Exit position
+        let exitPos = { x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 };
+        
+        // Initialize the game
+        function initGame() {
+            generateMaze();
+            player = { x: 1, y: 1 };
+            revealedWalls.clear();
+            collisions = 0;
+            gameWon = false;
+            gameStarted = false;
+            startTime = Date.now();
+            updateStats();
+            draw();
+        }
+        
+        // Generate a simple but interesting maze
+        function generateMaze() {
+            // Initialize maze with walls
+            maze = Array(MAZE_HEIGHT).fill().map(() => Array(MAZE_WIDTH).fill(1));
+            
+            // Create paths using recursive backtracking
+            const stack = [];
+            const visited = Array(MAZE_HEIGHT).fill().map(() => Array(MAZE_WIDTH).fill(false));
+            
+            function isValid(x, y) {
+                return x >= 0 && x < MAZE_WIDTH && y >= 0 && y < MAZE_HEIGHT;
+            }
+            
+            function getNeighbors(x, y) {
+                const neighbors = [];
+                const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+                
+                for (const [dx, dy] of directions) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (isValid(nx, ny) && !visited[ny][nx]) {
+                        neighbors.push([nx, ny, x + dx/2, y + dy/2]);
+                    }
+                }
+                return neighbors;
+            }
+            
+            // Start from (1,1)
+            let currentX = 1, currentY = 1;
+            maze[currentY][currentX] = 0;
+            visited[currentY][currentX] = true;
+            
+            while (true) {
+                const neighbors = getNeighbors(currentX, currentY);
+                
+                if (neighbors.length > 0) {
+                    const [nx, ny, wallX, wallY] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    maze[ny][nx] = 0;
+                    maze[wallY][wallX] = 0;
+                    visited[ny][nx] = true;
+                    stack.push([currentX, currentY]);
+                    currentX = nx;
+                    currentY = ny;
+                } else if (stack.length > 0) {
+                    [currentX, currentY] = stack.pop();
+                } else {
+                    break;
+                }
+            }
+            
+            // Ensure start and exit are clear
+            maze[1][1] = 0;
+            maze[exitPos.y][exitPos.x] = 0;
+            
+            // Add some extra connections for more interesting gameplay
+            for (let i = 0; i < 3; i++) {
+                const x = 2 + Math.floor(Math.random() * (MAZE_WIDTH - 4));
+                const y = 2 + Math.floor(Math.random() * (MAZE_HEIGHT - 4));
+                if (maze[y][x] === 1) {
+                    maze[y][x] = 0;
+                }
+            }
+        }
+        
+        function generateNewMaze() {
+            initGame();
+        }
+        
+        // Draw the game
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid (subtle)
+            ctx.strokeStyle = '#f0f0f0';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= MAZE_WIDTH; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * CELL_SIZE, 0);
+                ctx.lineTo(x * CELL_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= MAZE_HEIGHT; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * CELL_SIZE);
+                ctx.lineTo(canvas.width, y * CELL_SIZE);
+                ctx.stroke();
+            }
+            
+            // Draw start zone
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(CELL_SIZE, CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(CELL_SIZE, CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            
+            // Draw exit zone
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(exitPos.x * CELL_SIZE, exitPos.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            ctx.strokeStyle = '#FFA500';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(exitPos.x * CELL_SIZE, exitPos.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            
+            // Draw revealed walls
+            ctx.fillStyle = '#333';
+            ctx.shadowBlur = 0; // Ensure no shadow effects on walls
+            for (const wallKey of revealedWalls) {
+                const [x, y] = wallKey.split(',').map(Number);
+                ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+            
+            // Draw player with glow effect
+            const playerX = player.x * CELL_SIZE;
+            const playerY = player.y * CELL_SIZE;
+            
+            // Glow effect
+            ctx.shadowColor = '#2196F3';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#2196F3';
+            ctx.fillRect(playerX + 2, playerY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            
+            // Reset shadow
+            ctx.shadowBlur = 0;
+            
+            // Player outline
+            ctx.strokeStyle = '#1976D2';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(playerX + 2, playerY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+        }
+        
+        // Handle player movement
+        function movePlayer(dx, dy) {
+            if (gameWon) return;
+            
+            if (!gameStarted) {
+                gameStarted = true;
+                startTime = Date.now();
+            }
+            
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+            
+            // Check boundaries
+            if (newX < 0 || newX >= MAZE_WIDTH || newY < 0 || newY >= MAZE_HEIGHT) {
+                return;
+            }
+            
+            // Check for wall collision
+            if (maze[newY][newX] === 1) {
+                // Reveal the wall instantly
+                const wallKey = `${newX},${newY}`;
+                if (!revealedWalls.has(wallKey)) {
+                    revealedWalls.add(wallKey);
+                    collisions++;
+                    updateStats();
+                    draw(); // Immediate redraw to show wall instantly
+                }
+                return;
+            }
+            
+            // Move player
+            player.x = newX;
+            player.y = newY;
+            
+            // Check for win condition
+            if (player.x === exitPos.x && player.y === exitPos.y) {
+                gameWon = true;
+                showWinScreen();
+            }
+            
+            draw();
+        }
+        
+        // Update stats display
+        function updateStats() {
+            if (!gameStarted) {
+                document.getElementById('timeValue').textContent = '00:00';
+            } else {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('timeValue').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            document.getElementById('collisionValue').textContent = collisions;
+            
+            // Calculate score (start with 100, lose points for collisions and time)
+            const timeElapsed = gameStarted ? Math.floor((Date.now() - startTime) / 1000) : 0;
+            const score = Math.max(0, 100 - collisions * 5 - Math.floor(timeElapsed / 10));
+            document.getElementById('scoreValue').textContent = score;
+        }
+        
+        // Show win screen
+        function showWinScreen() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const finalScore = Math.max(0, 100 - collisions * 5 - Math.floor(elapsed / 10));
+            
+            document.getElementById('finalTime').textContent = timeString;
+            document.getElementById('finalCollisions').textContent = collisions;
+            document.getElementById('finalScore').textContent = finalScore;
+            document.getElementById('winOverlay').style.display = 'flex';
+        }
+        
+        // Restart game
+        function restartGame() {
+            document.getElementById('winOverlay').style.display = 'none';
+            initGame();
+        }
+        
+        // Keyboard event handlers
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    e.preventDefault();
+                    movePlayer(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    e.preventDefault();
+                    movePlayer(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    e.preventDefault();
+                    movePlayer(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    e.preventDefault();
+                    movePlayer(1, 0);
+                    break;
+            }
+        });
+        
+        // Update stats every second
+        setInterval(updateStats, 1000);
+        
+        // Initialize game
+        initGame();
+    </script>
+</body>
+</html>
